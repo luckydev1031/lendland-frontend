@@ -1,0 +1,55 @@
+name: Tests and Checks
+
+on: [pull_request]
+
+env:
+  VITE_ENVIRONMENT: "ci"
+  NODE_OPTIONS: "--max_old_space_size=4096"
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "20.11.1"
+          cache: "yarn"
+
+      - name: Install dependencies
+        run: yarn
+
+      - name: Typecheck
+        run: yarn tsc
+
+      - name: Lint
+        run: yarn lint
+
+  test:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - uses: actions/setup-node@v2
+        with:
+          node-version: "20.11.1"
+          cache: "yarn"
+
+      - name: Install dependencies
+        run: yarn
+
+      - name: Run tests and collect coverage
+        run: yarn test --coverage
+
+      - name: "Report coverage"
+        if: always() # Also generate the report even if tests are failing
+        uses: davelosert/vitest-coverage-report-action@v2
+        with:
+          working-directory: "./apps/evm"

@@ -1,0 +1,271 @@
+import BigNumber from 'bignumber.js';
+
+import {
+  type GetIsolatedPoolParticipantsCountInput,
+  getIsolatedPoolParticipantsCount,
+} from 'clients/subgraph';
+import { type IsolatedPoolComptroller, getIsolatedPoolComptrollerContract } from 'libs/contracts';
+import { logError } from 'libs/errors';
+import { type Asset, ChainId, type PrimeApy, type Token } from 'types';
+import {
+  appendPrimeSimulationDistributions,
+  areAddressesEqual,
+  areTokensEqual,
+  convertAprToApy,
+  findTokenByAddress,
+} from 'utilities';
+import extractSettledPromiseValue from 'utilities/extractSettledPromiseValue';
+import removeDuplicates from 'utilities/removeDuplicates';
+
+import getBlockNumber from '../getBlockNumber';
+import getTokenBalances from '../getTokenBalances';
+import formatOutput from './formatOutput';
+import getRewardsDistributorSettingsMapping from './getRewardsDistributorSettingsMapping';
+import getTokenPriceDollarsMapping from './getTokenPriceDollarsMapping';
+import type { GetIsolatedPoolsInput, GetIsolatedPoolsOutput } from './types';
+
+export type { GetIsolatedPoolsInput, GetIsolatedPoolsOutput } from './types';
+
+export const LST_POOL_COMPTROLLER_ADDRESS = '0xF522cd0360EF8c2FF48B648d53EA1717Ec0F3Ac3';
+
+// Since the borrower and supplier counts aren't essential information, we make the logic so the
+// dApp can still function if the subgraph is down
+const safelyGetIsolatedPoolParticipantsCount = async ({
+  chainId,
+}: GetIsolatedPoolParticipantsCountInput) => {
+  try {
+    const res = await getIsolatedPoolParticipantsCount({ chainId });
+    return res;
+  } catch (error) {
+    logError(error);
+  }
+};
+
+const getIsolatedPools = async ({
+  chainId,
+  lela,
+  blocksPerDay,
+  accountAddress,
+  poolLensContract,
+  poolRegistryContractAddress,
+  resilientOracleContract,
+  primeContract,
+  provider,
+  tokens,
+}: GetIsolatedPoolsInput): Promise<GetIsolatedPoolsOutput> => {
+  const [
+    poolResults,
+    poolParticipantsCountResult,
+    currentBlockNumberResult,
+    primeVTokenAddressesResult,
+    primeMinimumXvsToStakeResult,
+    userPrimeTokenResult,
+  ] = await Promise.allSettled([
+    // Fetch all pools
+    poolLensContract.getAllPools(poolRegistryContractAddress),
+    // Fetch borrower and supplier counts of each isolated token
+    safelyGetIsolatedPoolParticipantsCount({ chainId }),
+    // Fetch current block number
+    getBlockNumber({ provider }),
+    // Prime related calls
+    primeContract?.getAllMarkets(),
+    primeContract?.MINIMUM_STAKED_XVS(),
+    accountAddress ? primeContract?.tokens(accountAddress) : undefined,
+  ]);
+  if (poolResults.status === 'rejected') {
+    throw new Error(poolResults.reason);
+  }
+
+  if (poolParticipantsCountResult.status === 'rejected') {
+    throw new Error(poolParticipantsCountResult.reason);
+  }
+
+  if (currentBlockNumberResult.status === 'rejected') {
+    throw new Error(currentBlockNumberResult.reason);
+  }
+
+  // Temporary fix to filter out the LST pool from the Ethereum network
+  const filteredPoolResults = poolResults.value.filter(
+    poolResult =>
+      chainId !== ChainId.ETHEREUM ||
+      !areAddressesEqual(poolResult.comptroller, LST_POOL_COMPTROLLER_ADDRESS),
+  );
+
+  // Extract token records and addresses
+  const [leTokenAddresses, underlyingTokens, underlyingTokenAddresses] = filteredPoolResults.reduce<
+    [string[], Token[], string[]]
+  >(
+    (acc, poolResult) => {
+      const newLeTokenAddresses: string[] = [];
+      const newUnderlyingTokens: Token[] = [];
+      const newUnderlyingTokenAddresses: string[] = [];
+
+      poolResult.leTokens.forEach(leTokenMetaData => {
+        const underlyingToken = findTokenByAddress({
+          address: leTokenMetaData.underlyingAssetAddress,
+          tokens,
+        });
+
+        if (!underlyingToken) {
+          logError(`Record missing for underlying token: ${leTokenMetaData.underlyingAssetAddress}`);
+          return;
+        }
+
+        if (!newLeTokenAddresses.includes(leTokenMetaData.leToken)) {
+          newLeTokenAddresses.push(leTokenMetaData.leToken.toLowerCase());
+        }
+
+        if (
+          !newUnderlyingTokens.some(listedUnderlyingToken =>
+            areTokensEqual(listedUnderlyingToken, underlyingToken),
+          )
+        ) {
+          newUnderlyingTokens.push(underlyingToken);
+        }
+
+        if (!newUnderlyingTokenAddresses.includes(underlyingToken.address.toLowerCase())) {
+          newUnderlyingTokenAddresses.push(underlyingToken.address.toLowerCase());
+        }
+      });
+
+      return [
+        acc[0].concat(newLeTokenAddresses),
+        acc[1].concat(newUnderlyingTokens),
+        acc[2].concat(newUnderlyingTokenAddresses),
+      ];
+    },
+    [[], [], []],
+  );
+  // Extract Prime data
+  const primeVTokenAddresses = extractSettledPromiseValue(primeVTokenAddressesResult) || [];
+  const primeMinimumXvsToStakeMantissa = extractSettledPromiseValue(primeMinimumXvsToStakeResult);
+  const isUserPrime = extractSettledPromiseValue(userPrimeTokenResult)?.exists || false;
+
+  // Fetch reward distributors and addresses of user collaterals
+  const getRewardDistributorsPromises: ReturnType<
+    IsolatedPoolComptroller['getRewardDistributors']
+  >[] = [];
+  const getAssetsInPromises: ReturnType<IsolatedPoolComptroller['getAssetsIn']>[] = [];
+
+  filteredPoolResults.forEach(poolResult => {
+    const comptrollerContract = getIsolatedPoolComptrollerContract({
+      signerOrProvider: provider,
+      address: poolResult.comptroller,
+    });
+
+    getRewardDistributorsPromises.push(comptrollerContract.getRewardDistributors());
+
+    if (accountAddress) {
+      getAssetsInPromises.push(comptrollerContract.getAssetsIn(accountAddress));
+    }
+  });
+
+  const settledGetRewardDistributorsPromises = Promise.allSettled(getRewardDistributorsPromises);
+  const settledGetAssetsInPromises = Promise.allSettled(getAssetsInPromises);
+  const settledUserPromises = Promise.allSettled([
+    accountAddress
+      ? poolLensContract.callStatic.leTokenBalancesAll(leTokenAddresses, accountAddress)
+      : undefined,
+    accountAddress
+      ? getTokenBalances({
+        accountAddress,
+        tokens: underlyingTokens,
+        provider,
+      })
+      : undefined,
+  ]);
+
+  // Fetch Prime distributions
+  const settledPrimeAprPromises =
+    primeContract && isUserPrime
+      ? Promise.allSettled(
+        accountAddress
+          ? primeVTokenAddresses.map(primeVTokenAddress =>
+            primeContract.calculateAPR(primeVTokenAddress, accountAddress),
+          )
+          : [],
+      )
+      : undefined;
+
+  const getRewardDistributorsResults = await settledGetRewardDistributorsPromises;
+  const [userVTokenBalancesAllResult, userTokenBalancesResult] = await settledUserPromises;
+  const userAssetsInResults = await settledGetAssetsInPromises;
+  const primeAprResults = (await settledPrimeAprPromises) || [];
+
+  // Get addresses of user collaterals
+  const userCollateralizedVTokenAddresses = removeDuplicates(
+    userAssetsInResults.reduce<string[]>((acc, userAssetsInResult) => {
+      const result = extractSettledPromiseValue(userAssetsInResult);
+
+      if (!result) {
+        return acc;
+      }
+
+      return acc.concat(result);
+    }, []),
+  );
+
+  // Get Prime APYs
+  const primeApyMap = new Map<string, PrimeApy>();
+  primeAprResults.forEach((primeAprResult, index) => {
+    if (primeAprResult.status !== 'fulfilled') {
+      return;
+    }
+
+    const primeApr = primeAprResult.value;
+
+    const apys: PrimeApy = {
+      borrowApy: convertAprToApy({ aprBips: primeApr?.borrowAPR.toString() || '0' }),
+      supplyApy: convertAprToApy({ aprBips: primeApr?.supplyAPR.toString() || '0' }),
+    };
+
+    primeApyMap.set(primeVTokenAddresses[index], apys);
+  });
+
+  // Fetch reward settings
+  const rewardsDistributorSettingsMapping = await getRewardsDistributorSettingsMapping({
+    provider,
+    poolResults: filteredPoolResults,
+    getRewardDistributorsResults,
+  });
+
+  // Fetch token prices
+  const tokenPriceDollarsMapping = await getTokenPriceDollarsMapping({
+    tokens,
+    underlyingTokenAddresses,
+    rewardsDistributorSettingsMapping,
+    resilientOracleContract,
+  });
+
+  const pools = formatOutput({
+    blocksPerDay,
+    tokens,
+    currentBlockNumber: currentBlockNumberResult.value.blockNumber,
+    poolResults: filteredPoolResults,
+    poolParticipantsCountResult: poolParticipantsCountResult.value,
+    rewardsDistributorSettingsMapping,
+    tokenPriceDollarsMapping,
+    userCollateralizedVTokenAddresses,
+    userVTokenBalancesAll: extractSettledPromiseValue(userVTokenBalancesAllResult),
+    userTokenBalancesAll: extractSettledPromiseValue(userTokenBalancesResult),
+    primeApyMap,
+  });
+
+  // Fetch Prime simulations and add them to distributions
+  if (primeContract && primeMinimumXvsToStakeMantissa) {
+    await appendPrimeSimulationDistributions({
+      assets: pools.reduce<Asset[]>((acc, pool) => acc.concat(pool.assets), []),
+      primeContract,
+      primeVTokenAddresses,
+      accountAddress,
+      primeMinimumXvsToStakeMantissa: new BigNumber(primeMinimumXvsToStakeMantissa.toString()),
+      lela,
+    });
+  }
+
+  return {
+    pools,
+  };
+};
+
+export default getIsolatedPools;

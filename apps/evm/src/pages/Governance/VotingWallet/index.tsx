@@ -1,0 +1,257 @@
+import BigNumber from 'bignumber.js';
+import { useMemo, useState } from 'react';
+
+import {
+  useGetCurrentVotes,
+  useGetVestingVaults,
+  useGetVoteDelegateAddress,
+  useSetVoteDelegate,
+} from 'clients/api';
+import {
+  Button,
+  ButtonWrapper,
+  Card,
+  Delimiter,
+  Icon,
+  InfoIcon,
+  NoticeInfo,
+  PrimaryButton,
+  TokenIcon,
+} from 'components';
+import { routes } from 'constants/routing';
+import { XVS_SNAPSHOT_URL } from 'constants/xvsSnapshotUrl';
+import { Link } from 'containers/Link';
+import { useIsFeatureEnabled } from 'hooks/useIsFeatureEnabled';
+import { useGetToken } from 'libs/tokens';
+import { useTranslation } from 'libs/translations';
+import { governanceChain, useAccountAddress, useAuthModal, useSwitchChain } from 'libs/wallet';
+import { areTokensEqual, cn, convertMantissaToTokens } from 'utilities';
+
+import DelegateModal from './DelegateModal';
+import TEST_IDS from './testIds';
+
+export interface VotingWalletProps {
+  className?: string;
+}
+
+const VotingWallet: React.FC<VotingWalletProps> = ({ className }) => {
+  const [delegateModelIsOpen, setDelegateModelIsOpen] = useState(false);
+  const { accountAddress } = useAccountAddress();
+  const isUserConnected = !!accountAddress;
+  const { openAuthModal } = useAuthModal();
+  const lela = useGetToken({
+    symbol: 'LELA',
+  });
+
+  const { data: currentVotesData, isLoading: areCurrentVotesLoading } = useGetCurrentVotes(
+    { accountAddress: accountAddress || '' },
+    { enabled: !!accountAddress },
+  );
+  const votingWeightMantissa = currentVotesData?.votesMantissa || new BigNumber(0);
+
+  const { data: delegateData, isLoading: isGetVoteDelegateAddressLoading } =
+    useGetVoteDelegateAddress(
+      { accountAddress: accountAddress || '' },
+      { enabled: !!accountAddress },
+    );
+  const delegate = delegateData?.delegateAddress;
+
+  const { data: vaults, isLoading: isGetVestingVaultsLoading } = useGetVestingVaults({
+    accountAddress,
+  });
+
+  const xvsVault = lela && vaults.find(v => areTokensEqual(v.stakedToken, lela));
+  const userStakedMantissa = xvsVault?.userStakedMantissa || new BigNumber(0);
+
+  const { mutateAsync: setVoteDelegation, isLoading: isVoteDelegationLoading } = useSetVoteDelegate(
+    {
+      onSuccess: () => setDelegateModelIsOpen(false),
+    },
+  );
+
+  const { switchChain } = useSwitchChain();
+  const voteProposalFeatureEnabled = useIsFeatureEnabled({ name: 'voteProposal' });
+  const { t, Trans } = useTranslation();
+
+  const readableXvsLocked = useMemo(
+    () =>
+      convertMantissaToTokens({
+        value: userStakedMantissa,
+        token: lela,
+        returnInReadableFormat: true,
+        addSymbol: false,
+      }),
+    [userStakedMantissa, lela],
+  );
+
+  const readableVoteWeight = useMemo(
+    () =>
+      convertMantissaToTokens({
+        value: votingWeightMantissa,
+        token: lela,
+        returnInReadableFormat: true,
+        addSymbol: false,
+      }),
+    [votingWeightMantissa, lela],
+  );
+
+  const isDataLoading =
+    areCurrentVotesLoading ||
+    isGetVoteDelegateAddressLoading ||
+    isGetVestingVaultsLoading ||
+    isVoteDelegationLoading;
+
+  const previouslyDelegated = !!delegate;
+  const userHasLockedXVS = userStakedMantissa.isGreaterThan(0);
+  const showDepositXvs =
+    !isDataLoading && isUserConnected && !userHasLockedXVS && voteProposalFeatureEnabled;
+  const showDelegateButton =
+    !isDataLoading && isUserConnected && userHasLockedXVS && voteProposalFeatureEnabled;
+
+  return (
+    <div className={cn('flex flex-col', className)}>
+      <h4 className="text-lg font-semibold">{t('vote.votingWallet')}</h4>
+
+      {/* {!voteProposalFeatureEnabled && (
+        <NoticeInfo
+          className="mt-4 w-full md:mt-6"
+          data-testid={TEST_IDS.votingDisabledWarning}
+          title={t('vote.multichain.votingOnlyEnabledOnBnb')}
+          description={
+            <Button
+              className="h-auto"
+              variant="text"
+              onClick={() => switchChain({ chainId: governanceChain.id })}
+            >
+              {t('vote.multichain.switchToBnb')}
+            </Button>
+          }
+        />
+      )} */}
+
+      <Card className="mt-6 flex flex-col px-6 py-6 sm:flex-row sm:items-center sm:justify-between sm:py-10 lg:flex-col lg:items-start lg:py-6">
+        <div className="border-r-[#21293A] pb-4 sm:border-r sm:pb-0 sm:pr-[26px] md:pr-10 lg:border-r-0 lg:pb-4">
+          <p className="text-grey text-base font-semibold sm:text-sm md:text-base">
+            {t('vote.votingWeight')}
+          </p>
+
+          <h3 className="text-xl sm:text-lg md:text-xl" data-testid={TEST_IDS.votingWeightValue}>
+            {readableVoteWeight}
+          </h3>
+        </div>
+
+        <Delimiter className="w-full sm:hidden lg:block" />
+
+        <div className="mt-4 sm:ml-[26px] sm:mr-auto sm:mt-0 md:ml-10 lg:ml-0 lg:mr-0 lg:mt-4">
+          <div className="mb-1 flex items-end sm:mb-0 lg:mb-1">
+            <p className="text-grey mr-2 text-base font-semibold sm:text-sm md:text-base">
+              {t('vote.totalLocked')}
+            </p>
+
+            {previouslyDelegated && (
+              <InfoIcon className="self-center" tooltip={t('vote.youDelegatedTo', { delegate })} />
+            )}
+          </div>
+
+          <div className="flex flex-row items-center">
+            {lela && <TokenIcon className="mr-3 h-[26px] w-[26px]" token={lela} />}
+
+            <h3 className="text-xl sm:text-lg md:text-xl" data-testid={TEST_IDS.totalLockedValue}>
+              {readableXvsLocked}
+            </h3>
+          </div>
+        </div>
+
+        {!isUserConnected && (
+          <PrimaryButton
+            className="text-offWhite mt-6 sm:mt-0 lg:mt-6 lg:w-full"
+            onClick={openAuthModal}
+          >
+            {t('connectWallet.connectButton')}
+          </PrimaryButton>
+        )}
+
+        {showDepositXvs && (
+          <ButtonWrapper
+            className="text-offWhite mt-6 hover:no-underline sm:mt-0 sm:w-auto lg:mt-6 lg:w-full"
+            asChild
+          >
+            <Link to={routes.vaults.path}>{t('vote.depositXvs')}</Link>
+          </ButtonWrapper>
+        )}
+
+        {showDelegateButton && (
+          <PrimaryButton
+            className="text-offWhite mt-6 sm:mt-0 sm:w-auto lg:mt-6 lg:w-full"
+            // NOTE: disable functionality for now
+            // onClick={() => setDelegateModelIsOpen(true)}
+            onClick={() => {}}
+            data-testid={TEST_IDS.delegateButton}
+          >
+            {previouslyDelegated ? t('vote.redelegate') : t('vote.delegate')}
+          </PrimaryButton>
+        )}
+      </Card>
+
+      {voteProposalFeatureEnabled && (
+        <>
+          <Card className="mt-6 flex flex-col p-6 lg:justify-between">
+            <p className="mb-4 font-semibold">{t('vote.toVoteYouShould')}</p>
+
+            <span className="mb-3 text-sm">
+              <Trans
+                i18nKey="vote.depositYourTokens"
+                components={{
+                  Link: <Link to={routes.vaults.path} data-testid={TEST_IDS.depositYourTokens} />,
+                }}
+              />
+            </span>
+
+            <span className="text-sm">
+              <Trans
+                i18nKey="vote.delegateYourVoting"
+                components={{
+                  Anchor: (
+                    <span
+                      className="text-blue hover:cursor-pointer hover:underline"
+                      role="button"
+                      aria-pressed="false"
+                      tabIndex={0}
+                      // NOTE: Disable functionality for now
+                      // onClick={() => setDelegateModelIsOpen(true)}
+                      onClick={() => {}}
+                      data-testid={TEST_IDS.delegateYourVoting}
+                    />
+                  ),
+                }}
+              />
+            </span>
+          </Card>
+
+          {/* <ButtonWrapper
+            variant="secondary"
+            className="text-offWhite mt-6 w-full hover:no-underline"
+            asChild
+          >
+            <Link href={XVS_SNAPSHOT_URL}>
+              <Icon className="mr-2 h-6 w-6" name="lightening" />
+              {t('vote.goToXvsSnapshot')}
+            </Link>
+          </ButtonWrapper> */}
+
+          <DelegateModal
+            onClose={() => setDelegateModelIsOpen(false)}
+            isOpen={delegateModelIsOpen}
+            currentUserAccountAddress={accountAddress}
+            previouslyDelegated={previouslyDelegated}
+            setVoteDelegation={setVoteDelegation}
+            isVoteDelegationLoading={isVoteDelegationLoading}
+            openAuthModal={openAuthModal}
+          />
+        </>
+      )}
+    </div>
+  );
+};
+
+export default VotingWallet;

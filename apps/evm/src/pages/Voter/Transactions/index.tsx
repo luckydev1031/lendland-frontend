@@ -1,0 +1,133 @@
+/** @jsxImportSource @emotion/react */
+import { Paper, Typography } from '@mui/material';
+import { useMemo } from 'react';
+
+import { ButtonWrapper, Icon, Spinner, Table, type TableColumn } from 'components';
+import { Link } from 'containers/Link';
+import { useGetToken } from 'libs/tokens';
+import { useTranslation } from 'libs/translations';
+import { useChainId } from 'libs/wallet';
+import { type VoteDetail, VoteSupport } from 'types';
+import { convertMantissaToTokens, generateChainExplorerUrl } from 'utilities';
+
+import { useStyles } from './styles';
+
+interface TransactionsProps {
+  address: string;
+  voterTransactions: VoteDetail[] | undefined;
+  className?: string;
+}
+
+export const Transactions: React.FC<TransactionsProps> = ({
+  className,
+  address,
+  voterTransactions = [],
+}) => {
+  const styles = useStyles();
+  const { t } = useTranslation();
+  const { chainId } = useChainId();
+  const lela = useGetToken({
+    symbol: 'LELA',
+  });
+
+  const columns: TableColumn<VoteDetail>[] = useMemo(
+    () => [
+      {
+        key: 'action',
+        label: t('voterDetail.actions'),
+        selectOptionLabel: t('voterDetail.actions'),
+        renderCell: transaction => {
+          switch (transaction.support) {
+            case VoteSupport.Against:
+              return (
+                <div css={styles.row}>
+                  <div css={[styles.icon, styles.against]}>
+                    <Icon name="closeRounded" />
+                  </div>
+                  {t('voterDetail.votedAgainst')}
+                </div>
+              );
+            case VoteSupport.For:
+              return (
+                <div css={styles.row}>
+                  <div css={[styles.icon, styles.for]}>
+                    <Icon name="mark" className="text-offWhite" />
+                  </div>
+                  {t('voterDetail.votedFor')}
+                </div>
+              );
+            case VoteSupport.Abstain:
+              return (
+                <div css={styles.row}>
+                  <div css={[styles.icon, styles.abstain]}>
+                    <Icon name="dots" />
+                  </div>
+                  {t('voterDetail.votedAbstain')}
+                </div>
+              );
+            default:
+              return <></>;
+          }
+        },
+      },
+      {
+        key: 'sent',
+        label: t('voterDetail.sent'),
+        selectOptionLabel: t('voterDetail.sent'),
+        renderCell: transaction =>
+          t('voterDetail.readableSent', { date: transaction.blockTimestamp }),
+      },
+      {
+        key: 'amount',
+        label: t('voterDetail.amount'),
+        selectOptionLabel: t('voterDetail.amount'),
+        align: 'right',
+        renderCell: transaction =>
+          convertMantissaToTokens({
+            value: transaction.votesMantissa,
+            token: lela,
+            returnInReadableFormat: true,
+          }),
+      },
+    ],
+    [t, lela, styles.abstain, styles.against, styles.for, styles.icon, styles.row],
+  );
+
+  return (
+    <Paper css={styles.root} className={className}>
+      <Typography css={styles.horizontalPadding} variant="h4">
+        {t('voterDetail.transactions')}
+      </Typography>
+
+      {voterTransactions?.length ? (
+        <Table
+          columns={columns}
+          data={voterTransactions}
+          rowKeyExtractor={row => `voter-transaction-table-row-${row.blockNumber}`}
+          breakpoint="sm"
+          css={styles.cardContentGrid}
+        />
+      ) : (
+        <Spinner css={styles.spinner} />
+      )}
+
+      <ButtonWrapper
+        variant="secondary"
+        className="text-offWhite mt-4 hover:no-underline sm:mx-6 sm:mt-0"
+        asChild
+      >
+        <Link
+          href={generateChainExplorerUrl({
+            hash: address,
+            urlType: 'address',
+            chainId,
+          })}
+        >
+          {t('voterDetail.viewAll')}
+        </Link>
+      </ButtonWrapper>
+    </Paper>
+  );
+};
+
+export default Transactions;

@@ -1,0 +1,21 @@
+import { ChainId } from 'types';
+
+import type { TokenMapping } from '../../types';
+import { tokens as bscMainnetTokens } from './bscMainnet';
+import { tokens as bscTestnetTokens } from './bscTestnet';
+import { tokens as ethereumTokens } from './ethereum';
+import { tokens as opBnbMainnetTokens } from './opBnbMainnet';
+import { tokens as opBnbTestnetTokens } from './opBnbTestnet';
+import { tokens as sepoliaTokens } from './sepolia';
+import { tokens as bobaSepoliaTokens } from './bobaSepolia';
+
+export const tokens: TokenMapping = {
+  [ChainId.BSC_MAINNET]: bscMainnetTokens,
+  [ChainId.BSC_TESTNET]: bscTestnetTokens,
+  [ChainId.OPBNB_MAINNET]: opBnbMainnetTokens,
+  [ChainId.OPBNB_TESTNET]: opBnbTestnetTokens,
+  [ChainId.SEPOLIA]: sepoliaTokens,
+  [ChainId.ETHEREUM]: ethereumTokens,
+  [ChainId.BOBA]: sepoliaTokens,
+  [ChainId.BOBA_TESTNET]: bobaSepoliaTokens
+};

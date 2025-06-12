@@ -1,0 +1,426 @@
+import { abi as GovernorBravoDelegateAbi } from '@venusprotocol/governance-contracts/artifacts/contracts/Governance/GovernorBravoDelegate.sol/GovernorBravoDelegate.json';
+import venusGovernanceBscMainnetDeployments from '@venusprotocol/governance-contracts/deployments/bscmainnet_addresses.json';
+import venusGovernanceBscTestnetDeployments from '@venusprotocol/governance-contracts/deployments/bsctestnet_addresses.json';
+import { abi as JumpRateModelV2Abi } from '@venusprotocol/isolated-pools/artifacts/contracts/JumpRateModelV2.sol/JumpRateModelV2.json';
+import { abi as PoolLensAbi } from '@venusprotocol/isolated-pools/artifacts/contracts/Lens/PoolLens.sol/PoolLens.json';
+import { abi as PoolRegistryAbi } from '@venusprotocol/isolated-pools/artifacts/contracts/Pool/PoolRegistry.sol/PoolRegistry.json';
+import { abi as RewardsDistributorAbi } from '@venusprotocol/isolated-pools/artifacts/contracts/Rewards/RewardsDistributor.sol/RewardsDistributor.json';
+import isolatedPoolsBscMainnetDeployments from '@venusprotocol/isolated-pools/deployments/bscmainnet_addresses.json';
+import isolatedPoolsBscTestnetDeployments from '@venusprotocol/isolated-pools/deployments/bsctestnet_addresses.json';
+import isolatedPoolsEthereumDeployments from '@venusprotocol/isolated-pools/deployments/ethereum_addresses.json';
+import isolatedPoolsOpBnbMainnetDeployments from '@venusprotocol/isolated-pools/deployments/opbnbmainnet_addresses.json';
+import isolatedPoolsOpBnbTestnetDeployments from '@venusprotocol/isolated-pools/deployments/opbnbtestnet_addresses.json';
+import isolatedPoolsSepoliaDeployments from '@venusprotocol/isolated-pools/deployments/sepolia_addresses.json';
+//import { abi as ResilientOracleAbi } from '@venusprotocol/oracle/artifacts/contracts/ResilientOracle.sol/ResilientOracle.json';
+import venusOracleBscMainnetDeployments from '@venusprotocol/oracle/deployments/bscmainnet_addresses.json';
+import venusOracleBscTestnetDeployments from '@venusprotocol/oracle/deployments/bsctestnet_addresses.json';
+import venusOracleEthereumDeployments from '@venusprotocol/oracle/deployments/ethereum_addresses.json';
+import venusOracleOpBnbMainnetDeployments from '@venusprotocol/oracle/deployments/opbnbmainnet_addresses.json';
+import venusOracleOpBnbTestnetDeployments from '@venusprotocol/oracle/deployments/opbnbtestnet_addresses.json';
+import venusOracleSepoliaDeployments from '@venusprotocol/oracle/deployments/sepolia_addresses.json';
+import { abi as XVSProxyOFTDest } from '@venusprotocol/token-bridge/artifacts/contracts/Bridge/XVSProxyOFTDest.sol/XVSProxyOFTDest.json';
+import { abi as XVSProxyOFTSrc } from '@venusprotocol/token-bridge/artifacts/contracts/Bridge/XVSProxyOFTSrc.sol/XVSProxyOFTSrc.json';
+// import { abi as XvsTokenMultichainAbi } from '@venusprotocol/token-bridge/artifacts/contracts/Bridge/token/LELA.sol/LELA.json';
+import tokenBridgeBscMainnetDeployments from '@venusprotocol/token-bridge/deployments/bscmainnet_addresses.json';
+import tokenBridgeBscTestnetDeployments from '@venusprotocol/token-bridge/deployments/bsctestnet_addresses.json';
+import tokenBridgeEthereumDeployments from '@venusprotocol/token-bridge/deployments/ethereum_addresses.json';
+import tokenBridgeOpBnbMainnetDeployments from '@venusprotocol/token-bridge/deployments/opbnbmainnet_addresses.json';
+import tokenBridgeOpBnbTestnetDeployments from '@venusprotocol/token-bridge/deployments/opbnbtestnet_addresses.json';
+import tokenBridgeSepoliaDeployments from '@venusprotocol/token-bridge/deployments/sepolia_addresses.json';
+import { abi as LegacyPoolComptrollerAbi } from '@venusprotocol/venus-protocol/artifacts/contracts/Comptroller/Diamond/DiamondConsolidated.sol/DiamondConsolidated.json';
+import { abi as VTreasuryAbi } from '@venusprotocol/venus-protocol/artifacts/contracts/Governance/VTreasury.sol/VTreasury.json';
+import { abi as VTreasuryV8Abi } from '@venusprotocol/venus-protocol/artifacts/contracts/Governance/VTreasuryV8.sol/VTreasuryV8.json';
+import { abi as JumpRateModelAbi } from '@venusprotocol/venus-protocol/artifacts/contracts/InterestRateModels/JumpRateModel.sol/JumpRateModel.json';
+import { abi as VenusLensAbi } from '@venusprotocol/venus-protocol/artifacts/contracts/Lens/VenusLens.sol/VenusLens.json';
+import { abi as SwapRouterAbi } from '@venusprotocol/venus-protocol/artifacts/contracts/Swap/SwapRouter.sol/SwapRouter.json';
+import { abi as Bep20Abi } from '@venusprotocol/venus-protocol/artifacts/contracts/Tokens/BEP20Interface.sol/BEP20Interface.json';
+import { abi as PrimeAbi } from '@venusprotocol/venus-protocol/artifacts/contracts/Tokens/Prime/Prime.sol/Prime.json';
+import { abi as VaiAbi } from '@venusprotocol/venus-protocol/artifacts/contracts/Tokens/VAI/VAI.sol/VAI.json';
+import { abi as VaiControllerAbi } from '@venusprotocol/venus-protocol/artifacts/contracts/Tokens/VAI/VAIController.sol/VAIController.json';
+import { abi as VrtAbi } from '@venusprotocol/venus-protocol/artifacts/contracts/Tokens/VRT/VRT.sol/VRT.json';
+import { abi as VrtConverterAbi } from '@venusprotocol/venus-protocol/artifacts/contracts/Tokens/VRT/VRTConverter.sol/VRTConverter.json';
+// import { abi as XvsAbi } from '@venusprotocol/venus-protocol/artifacts/contracts/Tokens/LELA/LELA.sol/LELA.json';
+// import { abi as XvsVestingAbi } from '@venusprotocol/venus-protocol/artifacts/contracts/Tokens/LELA/XVSVesting.sol/XVSVesting.json';
+import { abi as VaiVaultAbi } from '@venusprotocol/venus-protocol/artifacts/contracts/VAIVault/VAIVault.sol/VAIVault.json';
+import { abi as XvsStoreAbi } from '@venusprotocol/venus-protocol/artifacts/contracts/XVSVault/XVSStore.sol/XVSStore.json';
+import { abi as XvsVaultAbi } from '@venusprotocol/venus-protocol/artifacts/contracts/XVSVault/XVSVault.sol/XVSVault.json';
+import venusProtocolBscMainnetDeployments from '@venusprotocol/venus-protocol/deployments/bscmainnet_addresses.json';
+import venusProtocolBscTestnetDeployments from '@venusprotocol/venus-protocol/deployments/bsctestnet_addresses.json';
+import venusProtocolEthereumDeployments from '@venusprotocol/venus-protocol/deployments/ethereum_addresses.json';
+import venusProtocolOpBnbMainnetDeployments from '@venusprotocol/venus-protocol/deployments/opbnbmainnet_addresses.json';
+import venusProtocolOpBnbTestnetDeployments from '@venusprotocol/venus-protocol/deployments/opbnbtestnet_addresses.json';
+import venusProtocolSepoliaDeployments from '@venusprotocol/venus-protocol/deployments/sepolia_addresses.json';
+import type { ContractInterface } from 'ethers';
+
+import { ChainId } from 'types';
+
+// TODO: replace with the package ABI once it gets added
+import IsolatedPoolsComptrollerNtgCompatible from './externalAbis/Comptroller_NTG.json';
+import MaximillionAbi from './externalAbis/Maximillion.json';
+import multicall3Abi from './externalAbis/Multicall3.json';
+import NativeTokenGatewayAbi from './externalAbis/NativeTokenGateway.json';
+import pancakePairV2Abi from './externalAbis/PancakePairV2.json';
+import vBnbAbi from './externalAbis/VBnb.json';
+import XsequenceMulticall from './externalAbis/XsequenceMulticall.json';
+
+// from abi folder
+import  ResilientOracle  from './abis/ResilientOracle.json';
+import PoolLens from "./abis/PoolLens.json";
+import PoolRegistry from "./abis/PoolRegistry.json";
+import SwapRouter from "./abis/swapRouter.json";
+import LeToken20 from './abis/LeTokenImpl.json';
+
+
+export interface UniqueContractConfig {
+  name: string;
+  abi: ContractInterface;
+  address: Partial<{
+    [chainId in ChainId]: string;
+  }>;
+}
+
+export interface GenericContractConfig {
+  name: string;
+  abi: ContractInterface;
+}
+
+export interface SwapRouterContractConfig {
+  name: string;
+  abi: ContractInterface;
+  address: Partial<{
+    [chainId in ChainId]: {
+      [comptrollerContractAddress: string]: string;
+    };
+  }>;
+}
+
+export type ContractConfig =
+  | UniqueContractConfig
+  | GenericContractConfig
+  | SwapRouterContractConfig;
+
+export const contracts: ContractConfig[] = [
+  // Unique contracts
+  {
+    name: 'VenusLens',
+    abi: VenusLensAbi,
+    address: {
+      [ChainId.BSC_TESTNET]: venusProtocolBscTestnetDeployments.addresses.VenusLens,
+      [ChainId.BSC_MAINNET]: venusProtocolBscMainnetDeployments.addresses.VenusLens,
+    },
+  },
+  {
+    name: 'PoolLens',
+    abi: PoolLens.abi,
+    address: {
+      [ChainId.BSC_TESTNET]: isolatedPoolsBscTestnetDeployments.addresses.PoolLens,
+      [ChainId.BSC_MAINNET]: isolatedPoolsBscMainnetDeployments.addresses.PoolLens,
+      [ChainId.ETHEREUM]: isolatedPoolsEthereumDeployments.addresses.PoolLens,
+      [ChainId.OPBNB_MAINNET]: isolatedPoolsOpBnbMainnetDeployments.addresses.PoolLens,
+      [ChainId.OPBNB_TESTNET]: isolatedPoolsOpBnbTestnetDeployments.addresses.PoolLens,
+      [ChainId.SEPOLIA]: isolatedPoolsSepoliaDeployments.addresses.PoolLens,
+      [ChainId.BOBA_TESTNET]: PoolLens.address
+    },
+  },
+  {
+    name: 'PoolRegistry',
+    abi: PoolRegistry.abi,
+    address: {
+      [ChainId.BSC_TESTNET]: isolatedPoolsBscTestnetDeployments.addresses.PoolRegistry_Proxy,
+      [ChainId.BSC_MAINNET]: isolatedPoolsBscMainnetDeployments.addresses.PoolRegistry_Proxy,
+      [ChainId.ETHEREUM]: isolatedPoolsEthereumDeployments.addresses.PoolRegistry_Proxy,
+      [ChainId.OPBNB_MAINNET]: isolatedPoolsOpBnbMainnetDeployments.addresses.PoolRegistry_Proxy,
+      [ChainId.OPBNB_TESTNET]: isolatedPoolsOpBnbTestnetDeployments.addresses.PoolRegistry_Proxy,
+      [ChainId.SEPOLIA]: isolatedPoolsSepoliaDeployments.addresses.PoolRegistry_Proxy,
+      [ChainId.BOBA_TESTNET]: PoolRegistry.address
+    },
+  },
+  {
+    name: 'LegacyPoolComptroller',
+    abi: LegacyPoolComptrollerAbi,
+    address: {
+      [ChainId.BSC_TESTNET]: venusProtocolBscTestnetDeployments.addresses.Unitroller,
+      [ChainId.BSC_MAINNET]: venusProtocolBscMainnetDeployments.addresses.Unitroller,
+    },
+  },
+  {
+    name: 'VaiController',
+    abi: VaiControllerAbi,
+    address: {
+      [ChainId.BSC_TESTNET]: venusProtocolBscTestnetDeployments.addresses.VaiUnitroller,
+      [ChainId.BSC_MAINNET]: venusProtocolBscMainnetDeployments.addresses.VaiUnitroller,
+    },
+  },
+  {
+    name: 'VaiVault',
+    abi: VaiVaultAbi,
+    address: {
+      [ChainId.BSC_TESTNET]: venusProtocolBscTestnetDeployments.addresses.VAIVaultProxy,
+      [ChainId.BSC_MAINNET]: venusProtocolBscMainnetDeployments.addresses.VAIVaultProxy,
+    },
+  },
+  {
+    name: 'XvsTokenMultichain',
+    abi: VaiVaultAbi, //XvsTokenMultichainAbi
+    address: {
+    },
+  },
+  {
+    name: 'XvsVault',
+    abi: XvsVaultAbi,
+    address: {
+      [ChainId.BSC_TESTNET]: venusProtocolBscTestnetDeployments.addresses.XVSVaultProxy,
+      [ChainId.BSC_MAINNET]: venusProtocolBscMainnetDeployments.addresses.XVSVaultProxy,
+      [ChainId.ETHEREUM]: venusProtocolEthereumDeployments.addresses.XVSVaultProxy,
+      [ChainId.SEPOLIA]: venusProtocolSepoliaDeployments.addresses.XVSVaultProxy,
+      [ChainId.OPBNB_MAINNET]: venusProtocolOpBnbMainnetDeployments.addresses.XVSVaultProxy,
+      [ChainId.OPBNB_TESTNET]: venusProtocolOpBnbTestnetDeployments.addresses.XVSVaultProxy,
+      [ChainId.BOBA_TESTNET]: venusProtocolOpBnbTestnetDeployments.addresses.XVSVaultProxy,
+    },
+  },
+  {
+    name: 'XvsStore',
+    abi: XvsStoreAbi,
+    address: {
+      [ChainId.BSC_TESTNET]: venusProtocolBscTestnetDeployments.addresses.XVSStore,
+      [ChainId.BSC_MAINNET]: venusProtocolBscMainnetDeployments.addresses.XVSStore,
+      [ChainId.ETHEREUM]: venusProtocolEthereumDeployments.addresses.XVSStore,
+      [ChainId.SEPOLIA]: venusProtocolSepoliaDeployments.addresses.XVSStore,
+      [ChainId.OPBNB_MAINNET]: venusProtocolOpBnbMainnetDeployments.addresses.XVSStore,
+      [ChainId.OPBNB_TESTNET]: venusProtocolOpBnbTestnetDeployments.addresses.XVSStore,
+    },
+  },
+  {
+    name: 'GovernorBravoDelegate',
+    abi: GovernorBravoDelegateAbi,
+    address: {
+      [ChainId.BSC_TESTNET]:
+        venusGovernanceBscTestnetDeployments.addresses.GovernorBravoDelegator_Proxy,
+      [ChainId.BSC_MAINNET]:
+        venusGovernanceBscMainnetDeployments.addresses.GovernorBravoDelegator_Proxy,
+    },
+  },
+  {
+    name: 'XvsVesting',
+    abi: GovernorBravoDelegateAbi, //XvsVestingAbi
+    address: {
+      [ChainId.BSC_TESTNET]: venusProtocolBscTestnetDeployments.addresses.XVSVestingProxy,
+      [ChainId.BSC_MAINNET]: venusProtocolBscMainnetDeployments.addresses.XVSVestingProxy,
+    },
+  },
+  {
+    name: 'VrtConverter',
+    abi: VrtConverterAbi,
+    address: {
+      [ChainId.BSC_TESTNET]: venusProtocolBscTestnetDeployments.addresses.VRTConverterProxy,
+      [ChainId.BSC_MAINNET]: venusProtocolBscMainnetDeployments.addresses.VRTConverterProxy,
+    },
+  },
+  {
+    name: 'Maximillion',
+    abi: MaximillionAbi,
+    address: {
+      [ChainId.BSC_TESTNET]: '0xF3a34e06015e019D6154a0f1089f695B27122f50',
+      [ChainId.BSC_MAINNET]: '0x5efA1e46F4Fd738FF721F5AebC895b970F13E8A1',
+    },
+  },
+  {
+    name: 'XsequenceMulticall',
+    abi: XsequenceMulticall,
+    address: {
+      [ChainId.BSC_MAINNET]: '0xd130B43062D875a4B7aF3f8fc036Bc6e9D3E1B3E',
+      [ChainId.BSC_TESTNET]: '0xd130B43062D875a4B7aF3f8fc036Bc6e9D3E1B3E',
+      [ChainId.ETHEREUM]: '0xd130B43062D875a4B7aF3f8fc036Bc6e9D3E1B3E',
+      [ChainId.SEPOLIA]: '0xd130B43062D875a4B7aF3f8fc036Bc6e9D3E1B3E',
+      [ChainId.OPBNB_MAINNET]: '0x3E5f527Adf40B65Fcbb4918e6507ecB89AF7Cdf5',
+      [ChainId.OPBNB_TESTNET]: '0x34D4c29902769a0168b9965CbC4147771206328D',
+      [ChainId.BOBA_TESTNET]: '0x44e0E5F472dD5653C92026Ae7Cd8d6C4C8f907C1',
+    },
+  },
+  {
+    name: 'Multicall3',
+    abi: multicall3Abi,
+    address: {
+      [ChainId.BSC_TESTNET]: '0xca11bde05977b3631167028862be2a173976ca11',
+      [ChainId.BSC_MAINNET]: '0xca11bde05977b3631167028862be2a173976ca11',
+      [ChainId.SEPOLIA]: '0xca11bde05977b3631167028862be2a173976ca11',
+      [ChainId.OPBNB_MAINNET]: '0xca11bde05977b3631167028862be2a173976ca11',
+      [ChainId.OPBNB_TESTNET]: '0xca11bde05977b3631167028862be2a173976ca11',
+      [ChainId.BOBA_TESTNET]: '0x0216a640C4d53F2a6603042d4E14A2B890efcD45'
+
+    },
+  },
+  {
+    name: 'ResilientOracle',
+    abi: ResilientOracle.abi,
+    address: {
+      [ChainId.BSC_TESTNET]: venusOracleBscTestnetDeployments.addresses.ResilientOracle,
+      [ChainId.BSC_MAINNET]: venusOracleBscMainnetDeployments.addresses.ResilientOracle,
+      [ChainId.ETHEREUM]: venusOracleEthereumDeployments.addresses.ResilientOracle,
+      [ChainId.OPBNB_MAINNET]: venusOracleOpBnbMainnetDeployments.addresses.ResilientOracle,
+      [ChainId.OPBNB_TESTNET]: venusOracleOpBnbTestnetDeployments.addresses.ResilientOracle,
+      [ChainId.SEPOLIA]: venusOracleSepoliaDeployments.addresses.ResilientOracle,
+      [ChainId.BOBA]: ResilientOracle.address,
+      [ChainId.BOBA_TESTNET]: ResilientOracle.address
+    },
+  },
+  {
+    name: 'Prime',
+    abi: PrimeAbi,
+    address: {
+      [ChainId.BSC_TESTNET]: venusProtocolBscTestnetDeployments.addresses.Prime,
+      [ChainId.BSC_MAINNET]: venusProtocolBscMainnetDeployments.addresses.Prime,
+      [ChainId.SEPOLIA]: venusProtocolSepoliaDeployments.addresses.Prime,
+    },
+  },
+  {
+    name: 'VTreasury',
+    abi: VTreasuryAbi,
+    address: {
+      [ChainId.BSC_TESTNET]: venusProtocolBscTestnetDeployments.addresses.VTreasury,
+      [ChainId.BSC_MAINNET]: venusProtocolBscMainnetDeployments.addresses.VTreasury,
+    },
+  },
+  {
+    name: 'VTreasuryV8',
+    abi: VTreasuryV8Abi,
+    address: {
+      [ChainId.ETHEREUM]: venusProtocolEthereumDeployments.addresses.VTreasuryV8,
+      [ChainId.SEPOLIA]: venusProtocolSepoliaDeployments.addresses.VTreasuryV8,
+      [ChainId.OPBNB_MAINNET]: venusProtocolOpBnbMainnetDeployments.addresses.VTreasuryV8,
+      [ChainId.OPBNB_TESTNET]: venusProtocolOpBnbTestnetDeployments.addresses.VTreasuryV8,
+    },
+  },
+  {
+    name: 'XVSProxyOFTDest',
+    abi: XVSProxyOFTDest,
+    address: {
+      [ChainId.ETHEREUM]: tokenBridgeEthereumDeployments.addresses.XVSProxyOFTDest,
+      [ChainId.SEPOLIA]: tokenBridgeSepoliaDeployments.addresses.XVSProxyOFTDest,
+      [ChainId.OPBNB_MAINNET]: tokenBridgeOpBnbMainnetDeployments.addresses.XVSProxyOFTDest,
+      [ChainId.OPBNB_TESTNET]: tokenBridgeOpBnbTestnetDeployments.addresses.XVSProxyOFTDest,
+    },
+  },
+  {
+    name: 'XVSProxyOFTSrc',
+    abi: XVSProxyOFTSrc,
+    address: {
+      [ChainId.BSC_MAINNET]: tokenBridgeBscMainnetDeployments.addresses.XVSProxyOFTSrc,
+      [ChainId.BSC_TESTNET]: tokenBridgeBscTestnetDeployments.addresses.XVSProxyOFTSrc,
+    },
+  },
+  // Generic Contracts
+  {
+    name: 'IsolatedPoolComptroller',
+    abi: IsolatedPoolsComptrollerNtgCompatible,
+  },
+  {
+    name: 'JumpRateModel',
+    abi: JumpRateModelAbi,
+  },
+  {
+    name: 'JumpRateModelV2',
+    abi: JumpRateModelV2Abi,
+  },
+  {
+    name: 'RewardsDistributor',
+    abi: RewardsDistributorAbi,
+  },
+  {
+    name: 'LeToken20',
+    abi: LeToken20.abi,
+  },
+  {
+    name: 'VBnb',
+    abi: vBnbAbi,
+  },
+  {
+    name: 'Bep20',
+    abi: Bep20Abi,
+  },
+  {
+    name: 'Xvs',
+    abi: Bep20Abi,//XvsAbi
+  },
+  {
+    name: 'Vai',
+    abi: VaiAbi,
+  },
+  {
+    name: 'Vrt',
+    abi: VrtAbi,
+  },
+  {
+    name: 'PancakePairV2',
+    abi: pancakePairV2Abi,
+  },
+  // SwapRouter contract
+  {
+    name: 'SwapRouter',
+    abi: SwapRouter.abi,
+    address: {
+      [ChainId.BSC_TESTNET]: {
+        // Core pool
+        [venusProtocolBscTestnetDeployments.addresses.Unitroller.toLowerCase()]:
+          venusProtocolBscTestnetDeployments.addresses.SwapRouterCorePool,
+        // Isolated pools
+        [isolatedPoolsBscTestnetDeployments.addresses.Comptroller_StableCoins.toLowerCase()]:
+          isolatedPoolsBscTestnetDeployments.addresses.SwapRouter_StableCoins,
+        [isolatedPoolsBscTestnetDeployments.addresses.Comptroller_Tron.toLowerCase()]:
+          isolatedPoolsBscTestnetDeployments.addresses.SwapRouter_Tron,
+        [isolatedPoolsBscTestnetDeployments.addresses.Comptroller_GameFi.toLowerCase()]:
+          isolatedPoolsBscTestnetDeployments.addresses.SwapRouter_GameFi,
+        [isolatedPoolsBscTestnetDeployments.addresses.Comptroller_DeFi.toLowerCase()]:
+          isolatedPoolsBscTestnetDeployments.addresses.SwapRouter_DeFi,
+        [isolatedPoolsBscTestnetDeployments.addresses.Comptroller_LiquidStakedBNB.toLowerCase()]:
+          isolatedPoolsBscTestnetDeployments.addresses.SwapRouter_LiquidStakedBNB,
+      },
+      [ChainId.BSC_MAINNET]: {
+        // Core pool
+        [venusProtocolBscMainnetDeployments.addresses.Unitroller.toLowerCase()]:
+          venusProtocolBscMainnetDeployments.addresses.SwapRouterCorePool,
+        // Isolated Pools
+        [isolatedPoolsBscMainnetDeployments.addresses.Comptroller_Stablecoins.toLowerCase()]:
+          isolatedPoolsBscMainnetDeployments.addresses.SwapRouter_Stablecoins,
+        [isolatedPoolsBscMainnetDeployments.addresses.Comptroller_Tron.toLowerCase()]:
+          isolatedPoolsBscMainnetDeployments.addresses.SwapRouter_Tron,
+        [isolatedPoolsBscMainnetDeployments.addresses.Comptroller_GameFi.toLowerCase()]:
+          isolatedPoolsBscMainnetDeployments.addresses.SwapRouter_GameFi,
+        [isolatedPoolsBscMainnetDeployments.addresses.Comptroller_DeFi.toLowerCase()]:
+          isolatedPoolsBscMainnetDeployments.addresses.SwapRouter_DeFi,
+        [isolatedPoolsBscMainnetDeployments.addresses.Comptroller_LiquidStakedBNB.toLowerCase()]:
+          isolatedPoolsBscMainnetDeployments.addresses.SwapRouter_LiquidStakedBNB,
+      },
+      [ChainId.OPBNB_MAINNET]: {},
+      [ChainId.OPBNB_TESTNET]: {},
+      [ChainId.ETHEREUM]: {},
+      [ChainId.SEPOLIA]: {},
+      [ChainId.BOBA_TESTNET]: {}
+    },
+  },
+  // NativeTokenGateway contract addresses for each supported pool
+  {
+    // TODO: replace with package addresses once they have been added
+    name: 'NativeTokenGateway',
+    abi: NativeTokenGatewayAbi,
+    address: {
+      [ChainId.BSC_TESTNET]: {
+        [isolatedPoolsBscTestnetDeployments.addresses.Comptroller_LiquidStakedBNB.toLowerCase()]:
+          '0xCf4C75398DaD73f16c762026144a1496f6869CD1',
+      },
+      [ChainId.BSC_MAINNET]: {},
+      [ChainId.OPBNB_MAINNET]: {},
+      [ChainId.OPBNB_TESTNET]: {
+        [isolatedPoolsOpBnbTestnetDeployments.addresses.Comptroller_Core.toLowerCase()]:
+          '0x78FB73687209019CC1799B99Af30b6FB0A5b8e14',
+      },
+      [ChainId.ETHEREUM]: {},
+      [ChainId.SEPOLIA]: {
+        [isolatedPoolsSepoliaDeployments.addresses.Comptroller_Core.toLowerCase()]:
+          '0xb8fD67f215117FADeF06447Af31590309750529D',
+        [isolatedPoolsSepoliaDeployments.addresses['Comptroller_Liquid Staked ETH'].toLowerCase()]:
+          '0x1FD30e761C3296fE36D9067b1e398FD97B4C0407',
+      },
+    },
+  },
+];

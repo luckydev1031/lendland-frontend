@@ -1,0 +1,44 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": [".nvmrc", "tsconfig.json", "vite.config.ts"],
+  "pipeline": {
+    "generate": {
+      "outputs": [
+        "src/constants/version.ts",
+        "src/libs/tokens/infos/pancakeSwapTokens/bscMainnet.ts",
+        "src/libs/contracts/generated/**/*",
+        "src/clients/subgraph/gql/generated/mainnet.ts",
+        "src/clients/subgraph/gql/generated/testnet.ts"
+      ]
+    },
+    "start": {
+      "dependsOn": ["^build", "^generate"],
+      "cache": false,
+      "persistent": true
+    },
+    "test": {
+      "cache": false,
+      "outputs": ["coverage/**/*"]
+    },
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["build/**/*"]
+    },
+    "lint": {
+      "cache": false
+    },
+    "lint:styles": {
+      "cache": false
+    },
+    "tsc": {
+      "cache": false
+    },
+    "format": {},
+    "extract-translations": {
+      "cache": false
+    },
+    "clean": {
+      "cache": false
+    }
+  }
+}
